@@ -9,8 +9,8 @@ class Entrio extends AbstractPlugin
 {
     protected $data;
     protected $interval = 60*10;
-    protected $ticketsURL = 'https://www.entrio.hr/api/webcamp/get_ticket_count';
-    protected $visitorsURL = 'https://www.entrio.hr/api/webcamp/get_visitors';
+    protected $ticketsURL = 'https://www.entrio.hr/api/get_ticket_count';
+    protected $visitorsURL = 'https://www.entrio.hr/api/get_visitors';
 
     public function __construct(SlackBot $bot, $apiKey)
     {
@@ -60,7 +60,7 @@ class Entrio extends AbstractPlugin
         }
     }
 
-    protected function tickets($channel, $tokens)
+    protected function tickets($channel)
     {
         if (!isset($this->data['tickets'])) {
             $this->bot->send($channel, "No data. Wait a little bit.");
