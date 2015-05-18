@@ -1,0 +1,62 @@
+#!/usr/bin/env php
+<?php
+
+require __DIR__ . '/../vendor/autoload.php';
+require __DIR__ . '/../etc/settings.php';
+
+use Monolog\Handler\StreamHandler;
+use Monolog\Logger;
+use Ratchet\Client\WebSocket;
+use WebCamp\SlackBot\Plugins;
+use WebCamp\SlackBot\SlackBot;
+
+$url = "https://slack.com/api/rtm.start?token=" . SLACK_TOKEN;
+
+// Create a logger
+$logFile = __DIR__ . '/../var/slackbot.log';
+$log = new Logger('slackbot');
+$log->pushHandler(new StreamHandler(STDOUT, Logger::DEBUG));
+$log->pushHandler(new StreamHandler($logFile, Logger::DEBUG));
+
+$log->addInfo("Authenticating with Slack...");
+
+// Get websocket URL from Slack (blocking)
+$client = new Guzzle\Http\Client();
+$request = $client->get($url);
+$slackData = $request->send()->json();
+$url = $slackData['url'];
+
+// Setup an event loop and websocket client
+$loop = React\EventLoop\Factory::create();
+$connector = new Ratchet\Client\Factory($loop);
+
+// Setup a HTTP client for asnyc requests
+$dnsFactory = new \React\Dns\Resolver\Factory();
+$dnsResolver = $dnsFactory->createCached('8.8.8.8', $loop);
+$factory = new \React\HttpClient\Factory();
+$httpClient = $factory->create($loop, $dnsResolver);
+
+$log->addInfo("Connecting to websocket URL: $url");
+
+$onFulfilled = function(WebSocket $webSocket) use ($httpClient, $loop, $log, $slackData) {
+    $log->addInfo("Connected.");
+
+    $slackBot = new SlackBot(
+        $webSocket,
+        $httpClient,
+        $loop,
+        $log,
+        $slackData
+    );
+
+    $slackBot->addPlugin(new Plugins\Entrio($slackBot, ENTRIO_TOKEN));
+};
+
+$onRejected = function($ex) use ($loop) {
+    $log->addError("Could not connect.\n$ex");
+    $loop->stop();
+};
+
+$connector($url)->then($onFulfilled, $onRejected);
+
+$loop->run();

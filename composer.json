@@ -1,0 +1,13 @@
+{
+    "require": {
+        "ratchet/pawl": "@stable",
+        "react/http-client": "@stable",
+        "monolog/monolog": "@stable",
+        "symfony/config": "~2.6.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "WebCamp\\SlackBot\\": "src"
+        }
+    }
+}
